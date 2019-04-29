@@ -1,0 +1,9 @@
+[package]
+name = "brainlift"
+version = "0.1.0"
+authors = ["Zhuowei Zhang <zhuowei@worthdoingbadly.com>"]
+edition = "2018"
+
+[dependencies]
+cranelift-module = "0.30.0"
+cranelift-faerie = "0.30.0"
