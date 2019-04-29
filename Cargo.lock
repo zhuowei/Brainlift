@@ -62,8 +62,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "brainlift"
 version = "0.1.0"
 dependencies = [
+ "cranelift-codegen 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cranelift-faerie 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cranelift-module 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "target-lexicon 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
