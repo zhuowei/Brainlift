@@ -5,7 +5,7 @@ authors = ["Zhuowei Zhang <zhuowei@worthdoingbadly.com>"]
 edition = "2018"
 
 [dependencies]
-cranelift-codegen = "0.30.0"
-cranelift-module = "0.30.0"
-cranelift-faerie = "0.30.0"
-target-lexicon = "0.3.0"
+cranelift-codegen = "0.37.0"
+cranelift-module = "0.37.0"
+cranelift-faerie = "0.37.0"
+target-lexicon = "0.4.0"

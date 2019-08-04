@@ -25,7 +25,7 @@ fn compile() -> ModuleResult<()> {
         isa,
         "out.obj".to_string(),
         FaerieTrapCollection::Disabled,
-        FaerieBuilder::default_libcall_names(),
+        cranelift_module::default_libcall_names(),
     )?;
     let mut module: Module<FaerieBackend> = Module::new(backend_builder);
     // define our main function
