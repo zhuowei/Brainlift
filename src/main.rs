@@ -1,5 +1,5 @@
 use cranelift_codegen::{Context};
-use cranelift_codegen::ir::{Signature, Type, ExternalName};
+use cranelift_codegen::ir::{Signature, Type, ExternalName, InstBuilder, Ebb};
 use cranelift_codegen::ir::function::{Function};
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
@@ -35,13 +35,26 @@ fn compile() -> ModuleResult<()> {
     let mut signature = Signature::new(CallConv::SystemV);
     let function_id = module.declare_function("main", Linkage::Export, &signature)?;
     // let's actually generate some code now.
-    // we create a Function, which holds our target independent code.
+    // we create a Function, which holds our target independent instructions.
     // TODO: how to get a proper external name?!
     let mut function = Function::with_name_signature(ExternalName::user(0, 0), signature);
-    // TODO: actually put in some code
+
+    // Actually put in some code.
+    // For now, just create a function that traps.
+    // we create the trap instruction:
+    /*
+    let instruction = InstBuilder::trap(42);
+    // and put it into a basic block.
+    let ebb = Ebb::with_number(0)?;
+    let mut layout = function.layout;
+    layout.append_ebb(ebb);
+    layout.append_inst(instruction, ebb);
+    */
+
     // now we create a context, and put our function into it
     // the context will lower our function to machine code.
     let mut function_context = Context::for_function(function);
     module.define_function(function_id, &mut function_context)?;
+    let product = module.finish();
     Ok(())
 }
