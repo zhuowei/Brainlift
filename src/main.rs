@@ -1,4 +1,6 @@
-use cranelift_codegen::ir::{Signature, Type};
+use cranelift_codegen::{Context};
+use cranelift_codegen::ir::{Signature, Type, ExternalName};
+use cranelift_codegen::ir::function::{Function};
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_faerie::{FaerieBackend, FaerieBuilder, FaerieTrapCollection};
@@ -32,5 +34,14 @@ fn compile() -> ModuleResult<()> {
     // note: this gives void main(), which is wrong but it still works.
     let mut signature = Signature::new(CallConv::SystemV);
     let function_id = module.declare_function("main", Linkage::Export, &signature)?;
+    // let's actually generate some code now.
+    // we create a Function, which holds our target independent code.
+    // TODO: how to get a proper external name?!
+    let mut function = Function::with_name_signature(ExternalName::user(0, 0), signature);
+    // TODO: actually put in some code
+    // now we create a context, and put our function into it
+    // the context will lower our function to machine code.
+    let mut function_context = Context::for_function(function);
+    module.define_function(function_id, &mut function_context)?;
     Ok(())
 }
