@@ -1,3 +1,4 @@
+use cranelift_codegen::entity::EntityRef;
 use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::types::*;
 use cranelift_codegen::ir::{AbiParam, Ebb, ExternalName, InstBuilder, Signature, Type};
@@ -8,10 +9,34 @@ use cranelift_faerie::{FaerieBackend, FaerieBuilder, FaerieTrapCollection};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_module::{Linkage, Module, ModuleResult};
 use std::fs::File;
+use std::str::Chars;
 use std::str::FromStr;
 use target_lexicon::triple;
 fn main() {
     compile().unwrap();
+}
+
+fn emit(builder: &mut FunctionBuilder, iter: &mut Chars, index_var: Variable) {
+    // grab the opcode from the string iterator
+    let opcode = match iter.next() {
+        Some(opcode) => opcode,
+        None => return,
+    };
+    // define some helper functions
+    // emits instructions for moving the Brainf--k index pointer
+    let mut moveptr = |offset: i64| {
+        let val = builder.use_var(index_var);
+        let tmp = builder.ins().iconst(I32, offset);
+        let newval = builder.ins().iadd(val, tmp);
+        builder.def_var(index_var, newval);
+    };
+    // switch on the opcode
+    match opcode {
+        '>' => moveptr(1),
+        '<' => moveptr(-1),
+        _ => (),
+    };
+    emit(builder, iter, index_var);
 }
 
 // note: the return type really should have a better error type!
@@ -50,6 +75,9 @@ fn compile() -> ModuleResult<()> {
     {
         // Allocated a builder, which helps us create the target independent instructions
         let mut builder = FunctionBuilder::new(&mut function, &mut function_builder_context);
+        // Define a variable to hold the Brainf--k index pointer.
+        let index_var = Variable::new(0);
+        builder.declare_var(index_var, I32);
         // Create a basic block
         let ebb = builder.create_ebb();
         // Seal the block: this means that we've already specified all entry points for this block
@@ -57,9 +85,13 @@ fn compile() -> ModuleResult<()> {
         builder.seal_block(ebb);
         // Start inserting instructions into the basic block
         builder.switch_to_block(ebb);
-        // add an "iconst" instruction
-        let return_value = builder.ins().iconst(I32, 42);
-        // add a "return" instruction to return the constant we just loaded
+        // initialize the index pointer to 0
+        let zero_const = builder.ins().iconst(I32, 0);
+        builder.def_var(index_var, zero_const);
+        // emit some bf
+        emit(&mut builder, &mut (">>><<".chars()), index_var);
+        let return_value = builder.use_var(index_var);
+        // add a "return" instruction to return the index variable
         builder.ins().return_(&[return_value]);
         builder.finalize();
     }
