@@ -7,6 +7,7 @@ use cranelift_codegen::settings::{self, Configurable};
 use cranelift_faerie::{FaerieBackend, FaerieBuilder, FaerieTrapCollection};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_module::{Linkage, Module, ModuleResult};
+use std::fs::File;
 use std::str::FromStr;
 use target_lexicon::triple;
 fn main() {
@@ -67,6 +68,9 @@ fn compile() -> ModuleResult<()> {
     // the context will lower our function to machine code.
     let mut function_context = Context::for_function(function);
     module.define_function(function_id, &mut function_context)?;
+    let mut file = File::create("out.o").unwrap();
     let product = module.finish();
+    // Write the product to a file.
+    product.write(file).unwrap();
     Ok(())
 }
