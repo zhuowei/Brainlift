@@ -1,9 +1,9 @@
-use cranelift_codegen::{Context};
-use cranelift_codegen::ir::{AbiParam, Signature, Type, ExternalName, InstBuilder, Ebb};
-use cranelift_codegen::ir::function::{Function};
+use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::types::*;
+use cranelift_codegen::ir::{AbiParam, Ebb, ExternalName, InstBuilder, Signature, Type};
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
+use cranelift_codegen::Context;
 use cranelift_faerie::{FaerieBackend, FaerieBuilder, FaerieTrapCollection};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_module::{Linkage, Module, ModuleResult};
