@@ -1,9 +1,11 @@
 use cranelift_codegen::{Context};
-use cranelift_codegen::ir::{Signature, Type, ExternalName, InstBuilder, Ebb};
+use cranelift_codegen::ir::{AbiParam, Signature, Type, ExternalName, InstBuilder, Ebb};
 use cranelift_codegen::ir::function::{Function};
+use cranelift_codegen::ir::types::*;
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_faerie::{FaerieBackend, FaerieBuilder, FaerieTrapCollection};
+use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_module::{Linkage, Module, ModuleResult};
 use std::str::FromStr;
 use target_lexicon::triple;
@@ -33,6 +35,7 @@ fn compile() -> ModuleResult<()> {
     // define our main function
     // note: this gives void main(), which is wrong but it still works.
     let mut signature = Signature::new(CallConv::SystemV);
+    signature.returns.push(AbiParam::new(I32));
     let function_id = module.declare_function("main", Linkage::Export, &signature)?;
     // let's actually generate some code now.
     // we create a Function, which holds our target independent instructions.
@@ -40,16 +43,25 @@ fn compile() -> ModuleResult<()> {
     let mut function = Function::with_name_signature(ExternalName::user(0, 0), signature);
 
     // Actually put in some code.
-    // For now, just create a function that traps.
-    // we create the trap instruction:
-    /*
-    let instruction = InstBuilder::trap(42);
-    // and put it into a basic block.
-    let ebb = Ebb::with_number(0)?;
-    let mut layout = function.layout;
-    layout.append_ebb(ebb);
-    layout.append_inst(instruction, ebb);
-    */
+    // See the sample at https://docs.rs/cranelift-frontend/0.37.0/cranelift_frontend/
+    // Allocate a function builder context - temporary storage for functions
+    let mut function_builder_context = FunctionBuilderContext::new();
+    {
+        // Allocated a builder, which helps us create the target independent instructions
+        let mut builder = FunctionBuilder::new(&mut function, &mut function_builder_context);
+        // Create a basic block
+        let ebb = builder.create_ebb();
+        // Seal the block: this means that we've already specified all entry points for this block
+        // in this case we only have one block, so we can seal it immediately
+        builder.seal_block(ebb);
+        // Start inserting instructions into the basic block
+        builder.switch_to_block(ebb);
+        // add an "iconst" instruction
+        let return_value = builder.ins().iconst(I32, 42);
+        // add a "return" instruction to return the constant we just loaded
+        builder.ins().return_(&[return_value]);
+        builder.finalize();
+    }
 
     // now we create a context, and put our function into it
     // the context will lower our function to machine code.

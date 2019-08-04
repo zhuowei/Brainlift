@@ -64,6 +64,7 @@ version = "0.1.0"
 dependencies = [
  "cranelift-codegen 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cranelift-faerie 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cranelift-frontend 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cranelift-module 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "target-lexicon 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -137,6 +138,16 @@ dependencies = [
  "faerie 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "goblin 0.0.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "target-lexicon 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "cranelift-frontend"
+version = "0.37.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cranelift-codegen 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "target-lexicon 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -579,6 +590,7 @@ dependencies = [
 "checksum cranelift-codegen-meta 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bd9de6ac290a8e10cb61b7e99518a71e5ba4569aed84a35d950c66055f6ba8a8"
 "checksum cranelift-entity 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fdda254bea18087a038982b9ede454736306b107bc0043d01bf563d2ee2fb88e"
 "checksum cranelift-faerie 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3de6410e56e7c2b05c4e68cc3aaa23ddf05d839af59b2c4f2996e721fa301832"
+"checksum cranelift-frontend 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e861f15ddb60a02f39af80d6168aac6939484b3a36b9f954648547ebf23b366b"
 "checksum cranelift-module 0.37.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3f48d8868cd2a02dca3afad9eafbd4c7c741edd8cb4d8283ebd9e7b6b634e4f3"
 "checksum env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b61fa891024a945da30a9581546e8cfaf5602c7b3f4c137a2805cf388f92075a"
 "checksum faerie 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6cb48b9db9869b6209c63d5cc2fd99f0b85d1a407cb09fe8ed730c21ab945e3d"
