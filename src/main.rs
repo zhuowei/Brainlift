@@ -53,12 +53,31 @@ fn emit(
             // and store it back
             builder.ins().store(MemFlags::trusted(), newval, addr, 0);
         };
+        let handle_loop = |builder: &mut FunctionBuilder| {
+            // create some new basic blocks.
+            // the basic block calculating the conditional for the loop
+            let conditional_block = builder.create_ebb();
+            // the basic block holding the instructions in the loop
+            let inside_block = builder.create_ebb();
+            // the basic block holding the instructions outside the loop
+            let outside_block = builder.create_ebb();
+            // make our current block jump to this new block
+            builder.ins().jump(conditional_block, &[]);
+            // emit the while loop's conditional:
+            builder.switch_to_block(conditional_block);
+            // while (cells_array_addr[index_var] != 0)
+            builder.ins().jump(outside_block, &[]);
+            // future instructions will be emitted into the outside block
+            builder.switch_to_block(outside_block);
+        };
         // switch on the opcode
         match opcode {
             '>' => moveptr(builder, 1),
             '<' => moveptr(builder, -1),
             '+' => arith(builder, 1),
             '-' => arith(builder, -1),
+            '[' => handle_loop(builder),
+            ']' => return,
             _ => (),
         };
     }
@@ -124,7 +143,7 @@ fn compile() -> ModuleResult<()> {
         // emit some bf
         emit(
             &mut builder,
-            &mut (">>>+<<".chars()),
+            &mut (">>>+<<[]".chars()),
             index_var,
             cells_array_addr,
         );
