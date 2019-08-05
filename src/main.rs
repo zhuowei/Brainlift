@@ -1,5 +1,5 @@
 use cranelift_codegen::entity::EntityRef;
-use cranelift_codegen::ir::entities::Value;
+use cranelift_codegen::ir::entities::{FuncRef, Value};
 use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::stackslot::{StackSlotData, StackSlotKind};
 use cranelift_codegen::ir::types::*;
@@ -23,6 +23,8 @@ fn emit(
     iter: &mut Chars,
     index_var: Variable,
     cells_array_addr: Value,
+    putchar_fn: FuncRef,
+    getchar_fn: FuncRef,
 ) {
     while true {
         // grab the opcode from the string iterator
@@ -80,13 +82,40 @@ fn emit(
 
             // recursively call ourself to generate instructions
             // inside the loop
-            emit(builder, iter, index_var, cells_array_addr);
+            emit(
+                builder,
+                iter,
+                index_var,
+                cells_array_addr,
+                putchar_fn,
+                getchar_fn,
+            );
             // emit a jump back to the conditional at the end of the loop
             builder.ins().jump(inside_block, &[]);
 
             // ok, we're done the loop.
             // future instructions will be emitted into the outside block
             builder.switch_to_block(outside_block);
+        };
+        let mut handle_print = |builder: &mut FunctionBuilder| {
+            // read the cell contents, again
+            let index_val = builder.use_var(index_var);
+            let index_val_i64 = builder.ins().uextend(I64, index_val);
+            let addr = builder.ins().iadd(cells_array_addr, index_val_i64);
+            let val = builder.ins().load(I8, MemFlags::trusted(), addr, 0);
+            // call putchar
+            builder.ins().call(putchar_fn, &[val]);
+        };
+        let mut handle_get = |builder: &mut FunctionBuilder| {
+            // call getchar
+            let inst = builder.ins().call(getchar_fn, &[]);
+            let results = builder.inst_results(inst);
+            let newval = results[0];
+            // write result to cell contents
+            let index_val = builder.use_var(index_var);
+            let index_val_i64 = builder.ins().uextend(I64, index_val);
+            let addr = builder.ins().iadd(cells_array_addr, index_val_i64);
+            builder.ins().store(MemFlags::trusted(), newval, addr, 0);
         };
         // switch on the opcode
         match opcode {
@@ -96,6 +125,8 @@ fn emit(
             '-' => arith(builder, -1),
             '[' => handle_loop(builder),
             ']' => return,
+            '.' => handle_print(builder),
+            ',' => handle_get(builder),
             _ => (),
         };
     }
@@ -123,6 +154,12 @@ fn compile() -> ModuleResult<()> {
         cranelift_module::default_libcall_names(),
     )?;
     let mut module: Module<FaerieBackend> = Module::new(backend_builder);
+
+    // Grab our imports.
+    // TODO: should be from module
+    let putchar_fn = FuncRef::with_number(0).unwrap();
+    let getchar_fn = FuncRef::with_number(0).unwrap();
+
     // define our main function
     // note: this gives void main(), which is wrong but it still works.
     let mut signature = Signature::new(CallConv::SystemV);
@@ -166,6 +203,8 @@ fn compile() -> ModuleResult<()> {
             &mut (bf_prog.chars()),
             index_var,
             cells_array_addr,
+            putchar_fn,
+            getchar_fn,
         );
         let return_value = builder.use_var(index_var);
         // add a "return" instruction to return the index variable
