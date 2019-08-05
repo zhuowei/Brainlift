@@ -1,5 +1,5 @@
 use cranelift_codegen::entity::EntityRef;
-use cranelift_codegen::ir::entities::{Value};
+use cranelift_codegen::ir::entities::Value;
 use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::stackslot::{StackSlotData, StackSlotKind};
 use cranelift_codegen::ir::types::*;
@@ -159,9 +159,11 @@ fn compile() -> ModuleResult<()> {
         // grab the stack slot's value
         let cells_array_addr = builder.ins().stack_addr(I64, stack_slot, 0);
         // emit some bf
+        // https://esolangs.org/wiki/Hello_world_program_in_esoteric_languages#Brainfuck
+        let bf_prog = "+[-[<<[+[--->]-[<<<]]]>>>-]>-.---.>..>.<<<<-.<+.>>>>>.>.<<.<-.";
         emit(
             &mut builder,
-            &mut (">>>+<<-[]".chars()),
+            &mut (bf_prog.chars()),
             index_var,
             cells_array_addr,
         );
