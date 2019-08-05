@@ -1,9 +1,9 @@
 use cranelift_codegen::entity::EntityRef;
-use cranelift_codegen::ir::entities::{StackSlot, Value};
+use cranelift_codegen::ir::entities::{Value};
 use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::stackslot::{StackSlotData, StackSlotKind};
 use cranelift_codegen::ir::types::*;
-use cranelift_codegen::ir::{AbiParam, ExternalName, InstBuilder, MemFlags, Signature, Type};
+use cranelift_codegen::ir::{AbiParam, ExternalName, InstBuilder, MemFlags, Signature};
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_codegen::Context;
@@ -73,7 +73,7 @@ fn compile() -> ModuleResult<()> {
     // since we don't implement ___cranelift_probestack
     shared_builder.set("probestack_enabled", "false");
     let shared_flags = settings::Flags::new(shared_builder);
-    let mut isa_builder = isa::lookup(triple!("x86_64-apple-darwin")).unwrap();
+    let isa_builder = isa::lookup(triple!("x86_64-apple-darwin")).unwrap();
     let isa = isa_builder.finish(shared_flags);
     // To emit some code, we need a Backend to write the code to an object file
     // so we can link it into an executable.
@@ -139,7 +139,7 @@ fn compile() -> ModuleResult<()> {
     // the context will lower our function to machine code.
     let mut function_context = Context::for_function(function);
     module.define_function(function_id, &mut function_context)?;
-    let mut file = File::create("out.o").unwrap();
+    let file = File::create("out.o").unwrap();
     let product = module.finish();
     // Write the product to a file.
     product.write(file).unwrap();
