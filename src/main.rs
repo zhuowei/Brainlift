@@ -1,9 +1,9 @@
 use cranelift_codegen::entity::EntityRef;
-use cranelift_codegen::ir::entities::StackSlot;
+use cranelift_codegen::ir::entities::{StackSlot, Value};
 use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::stackslot::{StackSlotData, StackSlotKind};
 use cranelift_codegen::ir::types::*;
-use cranelift_codegen::ir::{AbiParam, Ebb, ExternalName, InstBuilder, Signature, Type};
+use cranelift_codegen::ir::{AbiParam, ExternalName, InstBuilder, MemFlags, Signature, Type};
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_codegen::Context;
@@ -22,7 +22,7 @@ fn emit(
     builder: &mut FunctionBuilder,
     iter: &mut Chars,
     index_var: Variable,
-    stack_slot: StackSlot,
+    cells_array_addr: Value,
 ) {
     // grab the opcode from the string iterator
     let opcode = match iter.next() {
@@ -31,24 +31,36 @@ fn emit(
     };
     // define some helper functions
     // emits instructions for moving the Brainf--k index pointer
-    let mut moveptr = |offset: i64| {
+    let moveptr = |builder: &mut FunctionBuilder, offset: i64| {
         let val = builder.use_var(index_var);
         let tmp = builder.ins().iconst(I32, offset);
         let newval = builder.ins().iadd(val, tmp);
         builder.def_var(index_var, newval);
     };
-    let mut arith = |offset: i64| {
-        // TODO
+    let arith = |builder: &mut FunctionBuilder, offset: i64| {
+        // read the cell contents: cells_array_addr[index_var]
+        let index_val = builder.use_var(index_var);
+        // first, calculate cells_array_addr[index_var]
+        // (we can skip this with load_complex,
+        // but store_complex fails with "Store must have an encoding")
+        let index_val_i64 = builder.ins().uextend(I64, index_val);
+        let addr = builder.ins().iadd(cells_array_addr, index_val_i64);
+        let val = builder.ins().load(I8, MemFlags::trusted(), addr, 0);
+        // add the offset to it
+        let tmp = builder.ins().iconst(I8, offset);
+        let newval = builder.ins().iadd(val, tmp);
+        // and store it back
+        builder.ins().store(MemFlags::trusted(), newval, addr, 0);
     };
     // switch on the opcode
     match opcode {
-        '>' => moveptr(1),
-        '<' => moveptr(-1),
-        '+' => arith(1),
-        '-' => arith(-1),
+        '>' => moveptr(builder, 1),
+        '<' => moveptr(builder, -1),
+        '+' => arith(builder, 1),
+        '-' => arith(builder, -1),
         _ => (),
     };
-    emit(builder, iter, index_var, stack_slot);
+    emit(builder, iter, index_var, cells_array_addr);
 }
 
 // note: the return type really should have a better error type!
@@ -101,17 +113,25 @@ fn compile() -> ModuleResult<()> {
         let ebb = builder.create_ebb();
         // Seal the block: this means that we've already specified all entry points for this block
         // in this case we only have one block, so we can seal it immediately
-        builder.seal_block(ebb);
         // Start inserting instructions into the basic block
         builder.switch_to_block(ebb);
         // initialize the index pointer to 0
         let zero_const = builder.ins().iconst(I32, 0);
         builder.def_var(index_var, zero_const);
+        // grab the stack slot's value
+        let cells_array_addr = builder.ins().stack_addr(I64, stack_slot, 0);
         // emit some bf
-        emit(&mut builder, &mut (">>><<".chars()), index_var, stack_slot);
+        emit(
+            &mut builder,
+            &mut (">>>+<<".chars()),
+            index_var,
+            cells_array_addr,
+        );
         let return_value = builder.use_var(index_var);
         // add a "return" instruction to return the index variable
         builder.ins().return_(&[return_value]);
+        // all blocks' in-edges are known by now.
+        builder.seal_all_blocks();
         builder.finalize();
     }
 
