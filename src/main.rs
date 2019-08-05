@@ -53,20 +53,38 @@ fn emit(
             // and store it back
             builder.ins().store(MemFlags::trusted(), newval, addr, 0);
         };
-        let handle_loop = |builder: &mut FunctionBuilder| {
+        let mut handle_loop = |builder: &mut FunctionBuilder| {
             // create some new basic blocks.
-            // the basic block calculating the conditional for the loop
-            let conditional_block = builder.create_ebb();
             // the basic block holding the instructions in the loop
             let inside_block = builder.create_ebb();
             // the basic block holding the instructions outside the loop
             let outside_block = builder.create_ebb();
+
             // make our current block jump to this new block
-            builder.ins().jump(conditional_block, &[]);
+            builder.ins().jump(inside_block, &[]);
+
             // emit the while loop's conditional:
-            builder.switch_to_block(conditional_block);
+            builder.switch_to_block(inside_block);
             // while (cells_array_addr[index_var] != 0)
-            builder.ins().jump(outside_block, &[]);
+
+            // same as above: grab cells_array_addr[index_var]
+            let index_val = builder.use_var(index_var);
+            let index_val_i64 = builder.ins().uextend(I64, index_val);
+            let addr = builder.ins().iadd(cells_array_addr, index_val_i64);
+            let val = builder.ins().load(I8, MemFlags::trusted(), addr, 0);
+            // sign extend it
+            let val_i32 = builder.ins().sextend(I32, val);
+
+            // exit loop if value is zero
+            builder.ins().brz(val_i32, outside_block, &[]);
+
+            // recursively call ourself to generate instructions
+            // inside the loop
+            emit(builder, iter, index_var, cells_array_addr);
+            // emit a jump back to the conditional at the end of the loop
+            builder.ins().jump(inside_block, &[]);
+
+            // ok, we're done the loop.
             // future instructions will be emitted into the outside block
             builder.switch_to_block(outside_block);
         };
@@ -143,7 +161,7 @@ fn compile() -> ModuleResult<()> {
         // emit some bf
         emit(
             &mut builder,
-            &mut (">>>+<<[]".chars()),
+            &mut (">>>+<<-[]".chars()),
             index_var,
             cells_array_addr,
         );
