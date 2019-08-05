@@ -37,10 +37,15 @@ fn emit(
         let newval = builder.ins().iadd(val, tmp);
         builder.def_var(index_var, newval);
     };
+    let mut arith = |offset: i64| {
+        // TODO
+    };
     // switch on the opcode
     match opcode {
         '>' => moveptr(1),
         '<' => moveptr(-1),
+        '+' => arith(1),
+        '-' => arith(-1),
         _ => (),
     };
     emit(builder, iter, index_var, stack_slot);
@@ -52,6 +57,9 @@ fn compile() -> ModuleResult<()> {
     // https://docs.rs/cranelift-codegen/0.30.0/cranelift_codegen/isa/index.html
     let mut shared_builder = settings::builder();
     shared_builder.enable("is_pic");
+    // turn off stack probing: https://github.com/bjorn3/rustc_codegen_cranelift/blob/master/src/lib.rs#L241
+    // since we don't implement ___cranelift_probestack
+    shared_builder.set("probestack_enabled", "false");
     let shared_flags = settings::Flags::new(shared_builder);
     let mut isa_builder = isa::lookup(triple!("x86_64-apple-darwin")).unwrap();
     let isa = isa_builder.finish(shared_flags);
