@@ -1,5 +1,7 @@
 use cranelift_codegen::entity::EntityRef;
+use cranelift_codegen::ir::entities::StackSlot;
 use cranelift_codegen::ir::function::Function;
+use cranelift_codegen::ir::stackslot::{StackSlotData, StackSlotKind};
 use cranelift_codegen::ir::types::*;
 use cranelift_codegen::ir::{AbiParam, Ebb, ExternalName, InstBuilder, Signature, Type};
 use cranelift_codegen::isa::{self, CallConv};
@@ -16,7 +18,12 @@ fn main() {
     compile().unwrap();
 }
 
-fn emit(builder: &mut FunctionBuilder, iter: &mut Chars, index_var: Variable) {
+fn emit(
+    builder: &mut FunctionBuilder,
+    iter: &mut Chars,
+    index_var: Variable,
+    stack_slot: StackSlot,
+) {
     // grab the opcode from the string iterator
     let opcode = match iter.next() {
         Some(opcode) => opcode,
@@ -36,7 +43,7 @@ fn emit(builder: &mut FunctionBuilder, iter: &mut Chars, index_var: Variable) {
         '<' => moveptr(-1),
         _ => (),
     };
-    emit(builder, iter, index_var);
+    emit(builder, iter, index_var, stack_slot);
 }
 
 // note: the return type really should have a better error type!
@@ -78,6 +85,10 @@ fn compile() -> ModuleResult<()> {
         // Define a variable to hold the Brainf--k index pointer.
         let index_var = Variable::new(0);
         builder.declare_var(index_var, I32);
+        // Allocate the Brainf--k cells on the stack
+        let BF_CELLS_COUNT = 30000;
+        let stack_slot_data = StackSlotData::new(StackSlotKind::ExplicitSlot, BF_CELLS_COUNT);
+        let stack_slot = builder.create_stack_slot(stack_slot_data);
         // Create a basic block
         let ebb = builder.create_ebb();
         // Seal the block: this means that we've already specified all entry points for this block
@@ -89,7 +100,7 @@ fn compile() -> ModuleResult<()> {
         let zero_const = builder.ins().iconst(I32, 0);
         builder.def_var(index_var, zero_const);
         // emit some bf
-        emit(&mut builder, &mut (">>><<".chars()), index_var);
+        emit(&mut builder, &mut (">>><<".chars()), index_var, stack_slot);
         let return_value = builder.use_var(index_var);
         // add a "return" instruction to return the index variable
         builder.ins().return_(&[return_value]);
