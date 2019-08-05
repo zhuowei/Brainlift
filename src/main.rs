@@ -24,43 +24,44 @@ fn emit(
     index_var: Variable,
     cells_array_addr: Value,
 ) {
-    // grab the opcode from the string iterator
-    let opcode = match iter.next() {
-        Some(opcode) => opcode,
-        None => return,
-    };
-    // define some helper functions
-    // emits instructions for moving the Brainf--k index pointer
-    let moveptr = |builder: &mut FunctionBuilder, offset: i64| {
-        let val = builder.use_var(index_var);
-        let tmp = builder.ins().iconst(I32, offset);
-        let newval = builder.ins().iadd(val, tmp);
-        builder.def_var(index_var, newval);
-    };
-    let arith = |builder: &mut FunctionBuilder, offset: i64| {
-        // read the cell contents: cells_array_addr[index_var]
-        let index_val = builder.use_var(index_var);
-        // first, calculate cells_array_addr[index_var]
-        // (we can skip this with load_complex,
-        // but store_complex fails with "Store must have an encoding")
-        let index_val_i64 = builder.ins().uextend(I64, index_val);
-        let addr = builder.ins().iadd(cells_array_addr, index_val_i64);
-        let val = builder.ins().load(I8, MemFlags::trusted(), addr, 0);
-        // add the offset to it
-        let tmp = builder.ins().iconst(I8, offset);
-        let newval = builder.ins().iadd(val, tmp);
-        // and store it back
-        builder.ins().store(MemFlags::trusted(), newval, addr, 0);
-    };
-    // switch on the opcode
-    match opcode {
-        '>' => moveptr(builder, 1),
-        '<' => moveptr(builder, -1),
-        '+' => arith(builder, 1),
-        '-' => arith(builder, -1),
-        _ => (),
-    };
-    emit(builder, iter, index_var, cells_array_addr);
+    while true {
+        // grab the opcode from the string iterator
+        let opcode = match iter.next() {
+            Some(opcode) => opcode,
+            None => return,
+        };
+        // define some helper functions
+        // emits instructions for moving the Brainf--k index pointer
+        let moveptr = |builder: &mut FunctionBuilder, offset: i64| {
+            let val = builder.use_var(index_var);
+            let tmp = builder.ins().iconst(I32, offset);
+            let newval = builder.ins().iadd(val, tmp);
+            builder.def_var(index_var, newval);
+        };
+        let arith = |builder: &mut FunctionBuilder, offset: i64| {
+            // read the cell contents: cells_array_addr[index_var]
+            let index_val = builder.use_var(index_var);
+            // first, calculate cells_array_addr[index_var]
+            // (we can skip this with load_complex,
+            // but store_complex fails with "Store must have an encoding")
+            let index_val_i64 = builder.ins().uextend(I64, index_val);
+            let addr = builder.ins().iadd(cells_array_addr, index_val_i64);
+            let val = builder.ins().load(I8, MemFlags::trusted(), addr, 0);
+            // add the offset to it
+            let tmp = builder.ins().iconst(I8, offset);
+            let newval = builder.ins().iadd(val, tmp);
+            // and store it back
+            builder.ins().store(MemFlags::trusted(), newval, addr, 0);
+        };
+        // switch on the opcode
+        match opcode {
+            '>' => moveptr(builder, 1),
+            '<' => moveptr(builder, -1),
+            '+' => arith(builder, 1),
+            '-' => arith(builder, -1),
+            _ => (),
+        };
+    }
 }
 
 // note: the return type really should have a better error type!
