@@ -3,7 +3,9 @@ use cranelift_codegen::ir::entities::{FuncRef, Value};
 use cranelift_codegen::ir::function::Function;
 use cranelift_codegen::ir::stackslot::{StackSlotData, StackSlotKind};
 use cranelift_codegen::ir::types::*;
-use cranelift_codegen::ir::{AbiParam, ExternalName, InstBuilder, MemFlags, Signature};
+use cranelift_codegen::ir::{
+    AbiParam, ExtFuncData, ExternalName, InstBuilder, MemFlags, Signature,
+};
 use cranelift_codegen::isa::{self, CallConv};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_codegen::Context;
@@ -155,11 +157,6 @@ fn compile() -> ModuleResult<()> {
     )?;
     let mut module: Module<FaerieBackend> = Module::new(backend_builder);
 
-    // Grab our imports.
-    // TODO: should be from module
-    let putchar_fn = FuncRef::with_number(0).unwrap();
-    let getchar_fn = FuncRef::with_number(0).unwrap();
-
     // define our main function
     // note: this gives void main(), which is wrong but it still works.
     let mut signature = Signature::new(CallConv::SystemV);
@@ -177,6 +174,34 @@ fn compile() -> ModuleResult<()> {
     {
         // Allocated a builder, which helps us create the target independent instructions
         let mut builder = FunctionBuilder::new(&mut function, &mut function_builder_context);
+
+        // import the putchar function.
+        // see FunctionBuilder::call_memset for an example of importing.
+        // Same way we defined the signature for "main" above.
+        let mut putchar_signature = Signature::new(CallConv::SystemV);
+        putchar_signature.params.push(AbiParam::new(I8));
+        let putchar_name =
+            module.declare_function("putchar", Linkage::Import, &putchar_signature)?;
+        let putchar_sigref = builder.import_signature(putchar_signature);
+        // according to Cranelift's source,
+        // "Function identifiers are namespace 0 in `ir::ExternalName`".
+        let putchar_fn = builder.import_function(ExtFuncData {
+            name: ExternalName::from(putchar_name),
+            signature: putchar_sigref,
+            colocated: false,
+        });
+        // import the getchar function.
+        let mut getchar_signature = Signature::new(CallConv::SystemV);
+        getchar_signature.returns.push(AbiParam::new(I8));
+        let getchar_name =
+            module.declare_function("getchar", Linkage::Import, &getchar_signature)?;
+        let getchar_sigref = builder.import_signature(getchar_signature);
+        let getchar_fn = builder.import_function(ExtFuncData {
+            name: ExternalName::from(getchar_name),
+            signature: getchar_sigref,
+            colocated: false,
+        });
+
         // Define a variable to hold the Brainf--k index pointer.
         let index_var = Variable::new(0);
         builder.declare_var(index_var, I32);
