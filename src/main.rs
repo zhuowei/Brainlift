@@ -28,7 +28,7 @@ fn emit(
     putchar_fn: FuncRef,
     getchar_fn: FuncRef,
 ) {
-    while true {
+    loop {
         // grab the opcode from the string iterator
         let opcode = match iter.next() {
             Some(opcode) => opcode,
@@ -99,7 +99,7 @@ fn emit(
             // future instructions will be emitted into the outside block
             builder.switch_to_block(outside_block);
         };
-        let mut handle_print = |builder: &mut FunctionBuilder| {
+        let handle_print = |builder: &mut FunctionBuilder| {
             // read the cell contents, again
             let index_val = builder.use_var(index_var);
             let index_val_i64 = builder.ins().uextend(I64, index_val);
@@ -108,7 +108,7 @@ fn emit(
             // call putchar
             builder.ins().call(putchar_fn, &[val]);
         };
-        let mut handle_get = |builder: &mut FunctionBuilder| {
+        let handle_get = |builder: &mut FunctionBuilder| {
             // call getchar
             let inst = builder.ins().call(getchar_fn, &[]);
             let results = builder.inst_results(inst);
